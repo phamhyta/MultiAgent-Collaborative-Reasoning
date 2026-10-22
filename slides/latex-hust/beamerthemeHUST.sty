@@ -1,0 +1,354 @@
+\ProvidesPackage{beamerthemeHUST}
+
+% Dependencies
+\RequirePackage{kvoptions}
+\RequirePackage{etoolbox}
+\RequirePackage{graphicx}
+\RequirePackage{xparse}
+\RequirePackage{xstring}
+\RequirePackage{tikz}
+\usetikzlibrary{calc}
+% ==============================
+% Package Options Configuration
+% ==============================
+% This section defines the package options with their default values:
+% - logo: Logo variant to use (default: logo)
+% - theme: Color theme (default: blue)
+% - aspectratio: Slide aspect ratio (default: 169 for 16:9)
+% - assetext: asset extension pdf|jpg|png (default: pdf)
+\SetupKeyvalOptions{
+  family=template,
+  prefix=template@
+}
+\DeclareStringOption[logo]{logo}
+\DeclareStringOption[blue]{theme}
+\DeclareStringOption[auto]{aspectratio}
+\DeclareStringOption[pdf]{assetext}
+\ProcessKeyvalOptions*
+
+% ==============================
+% Additional theme features
+% ==============================
+\useinnertheme[shadow=true]{rounded}
+% \useoutertheme{infolines}
+% \usecolortheme{beaver}
+
+% ==============================
+% HUST brand colors
+% ==============================
+\definecolor{HUSTBlue}{RGB}{0,51,102}
+\definecolor{HUSTRed}{RGB}{192,32,52}
+\definecolor{HUSTYellow}{RGB}{229,156,10}
+
+% ==============================
+% Top bar Configuration
+% ==============================
+% blue => use HUSTRed
+% red  => use HUSTYellow
+\newcommand*\HUSTTopBarColor{HUSTRed}
+\ifdefstring{\template@theme}{red}{%
+  \renewcommand*\HUSTTopBarColor{HUSTYellow}%
+}{}
+
+% ==============================
+% Construct correct path to assets
+% ==============================
+% Map aspectratio option -> folder suffix
+\newcommand*\HUSTAspectFolder{16x9} % default
+\ifdefstring{\template@aspectratio}{auto}{
+  \ifdefstring{\insertaspectratio}{169}{
+    \renewcommand*\HUSTAspectFolder{16x9}
+  }{}
+  \ifdefstring{\insertaspectratio}{43}{
+    \renewcommand*\HUSTAspectFolder{4x3}
+  }{}
+}{
+  \ifdefstring{\template@aspectratio}{169}{\renewcommand*\HUSTAspectFolder{16x9}}{}%
+  \ifdefstring{\template@aspectratio}{43}{\renewcommand*\HUSTAspectFolder{4x3}}{}%
+}
+% Map theme option -> folder postfix
+\newcommand*\HUSTThemeFolder{blue}
+\ifdefstring{\template@theme}{red}{%
+  \renewcommand*\HUSTThemeFolder{red}%
+}{}
+% Joining together
+\newcommand*\HUSTBuildAssetPath[1]{%
+  \edef\HUST@AssetPath{assets/\HUSTThemeFolder\string_\HUSTAspectFolder/#1}%
+}
+\newcommand*\HUSTBuildBackgroundPath[1]{%
+  \IfEndWith{#1}{.pdf}{%
+    \HUSTBuildAssetPath{#1}%
+  }{%
+    \IfEndWith{#1}{.png}{%
+      \HUSTBuildAssetPath{#1}%
+    }{%
+      \IfEndWith{#1}{.jpg}{%
+        \HUSTBuildAssetPath{#1}%
+      }{%
+        \IfEndWith{#1}{.jpeg}{%
+          \HUSTBuildAssetPath{#1}%
+        }{%
+          \HUSTBuildAssetPath{#1.\template@assetext}%
+        }%
+      }%
+    }%
+  }%
+}
+% ==============================
+% End of Construct correct path to assets
+% ==============================
+
+% ==============================
+% Logo Configuration
+% ==============================
+% This section configures the HUST logo variants and their sizing behavior.
+% Each logo can be sized either by height or width, controlled by \ifhustbyheight.
+% Default configuration uses logo16.pdf (HUST without text) with width-based scaling.
+\newif\ifhustbyheight
+\def\slidelogo{assets/logo/01.pdf}
+\hustbyheightfalse
+% Logo variant configurations
+% Each section defines:
+% 1. Path to logo file
+% 2. Original dimensions in pixels
+% 3. Scaling method (height/width based)
+\ifdefstring{\template@logo}{logo}{
+  \def\slidelogo{assets/logo/01.pdf}
+  \newcommand{\logoWpx}{2363} % Original width (px)
+  \newcommand{\logoHpx}{3544} % Original height (px)
+  \hustbyheighttrue        % Scale by height
+}{}
+\ifdefstring{\template@logo}{logowithtext}{
+  \def\slidelogo{assets/logo/02.pdf}
+  \newcommand{\logoWpx}{7800} % Original width (px)
+  \newcommand{\logoHpx}{1182} % Original height (px)
+  \hustbyheighttrue        % Scale by height
+}{}
+\ifdefstring{\template@logo}{logowithtextvi}{
+  \def\slidelogo{assets/logo/03.pdf}
+  \newcommand{\logoWpx}{4230} % Original width (px)
+  \newcommand{\logoHpx}{1182} % Original height (px)
+  \hustbyheighttrue        % Scale by height
+}{}
+\ifdefstring{\template@logo}{logowithtexten}{
+  \def\slidelogo{assets/logo/06.pdf}
+  \newcommand{\logoWpx}{4866} % Original width (px)
+  \newcommand{\logoHpx}{1182} % Original height (px)
+  \hustbyheighttrue        % Scale by height
+}{}
+\ifdefstring{\template@logo}{hustwithtext}{
+  \def\slidelogo{assets/logo/12.pdf}
+  \newcommand{\logoWpx}{5906} % Original width (px)
+  \newcommand{\logoHpx}{2302} % Original height (px)
+  \hustbyheightfalse       % Scale by width
+}{}
+\ifdefstring{\template@logo}{hustwithtexten}{
+  \def\slidelogo{assets/logo/14.pdf}
+  \newcommand{\logoWpx}{5906} % Original width (px)
+  \newcommand{\logoHpx}{2302} % Height adjusted to match hustwithtext ratio
+  \hustbyheightfalse       % Scale by width
+}{}
+\ifdefstring{\template@logo}{hustwithtextenlong}{
+  \def\slidelogo{assets/logo/15.pdf}
+  \newcommand{\logoWpx}{5906} % Width adjusted to match hustwithtext ratio
+  \newcommand{\logoHpx}{1069} % Original height (px)
+  \hustbyheightfalse       % Scale by width
+}{}
+\ifdefstring{\template@logo}{hust}{
+  \def\slidelogo{assets/logo/16.pdf}
+  \newcommand{\logoWpx}{5907} % Original width (px)
+  \newcommand{\logoHpx}{2302} % Height adjusted to match hustwithtext ratio
+  \hustbyheightfalse       % Scale by width
+}{}
+\ifdefstring{\template@logo}{husty70color}{
+  \def\slidelogo{assets/logo/hustlogo_y70.pdf}
+  \newcommand{\logoWpx}{1500} % Original width (px)
+  \newcommand{\logoHpx}{1500} % Height adjusted to match hustwithtext ratio
+  \hustbyheightfalse       % Scale by width
+}{}
+% ==============================
+% End of Logo Configuration
+% ==============================
+
+% ==============================
+% Background and logo images manipulation
+% ==============================
+% --- Use an image as background: pass only the filename (no full path) ---
+% ------ Simple variant: fixed width=\paperwidth
+\newcommand{\HUSTUseBackground}[1]{%
+  \HUSTBuildBackgroundPath{#1}%
+  \usebackgroundtemplate{\includegraphics[width=\paperwidth]{\HUST@AssetPath}}%
+}
+% ------ Optional variant: allow passing options to \includegraphics
+\newcommand{\HUSTUseBackgroundOpt}[2][]{%
+  \HUSTBuildBackgroundPath{#2}%
+  \usebackgroundtemplate{\includegraphics[#1]{\HUST@AssetPath}}%
+}
+% --- Clear background so subsequent slides revert to the default
+\newcommand{\HUSTClearBackground}{%
+  \usebackgroundtemplate{}%
+}
+
+% --- Insert a brand cover slide (scoped; background does not leak to next slides)
+\newcommand{\HUSTInsertBrandSlide}{%
+  \begingroup
+  \HUSTUseBackground{theme_hust}
+  \begin{frame}[plain]
+  \end{frame}
+  \endgroup
+}
+% --- Insert a theme cover slide (scoped; background does not leak to next slides)
+\newcommand{\HUSTInsertThemeSlide}{%
+  \begingroup
+  \HUSTUseBackground{theme}
+  \begin{frame}[plain]
+  \end{frame}
+  \endgroup
+}
+% --- Insert an oneside cover slide (scoped; background does not leak to next slides)
+\newcommand{\HUSTInsertOnesideSlide}{%
+  \begingroup
+  \HUSTUseBackground{theme_hust_oneside}
+  \begin{frame}[plain]
+  \end{frame}
+  \endgroup
+}
+% \HUSTCornerImage[<height-fraction>][<x-offset>][<y-fraction>]{<file>}
+% - <height-fraction>: fraction of \paperheight for the image height (default 0.136)
+% - <x-offset>: horizontal shift from the top-left corner (default 0.35cm; any TeX length)
+% - <y-fraction>: fraction of \paperheight; negative values move downward (default -0.03)
+% - <file>: image file path
+\NewDocumentCommand{\HUSTCornerImage}{ O{0.136} O{0.35cm} O{-0.03} m }{%
+  \begin{tikzpicture}[remember picture,overlay]
+    \node[anchor=north west] at
+      ($(current page.north west)+(#2,#3\paperheight)$) {%
+        \includegraphics[height=#1\paperheight]{#4}%
+      };
+  \end{tikzpicture}%
+}
+% ==============================
+% End of Background and logo images manipulation
+% ==============================
+
+% ==============================
+% Default slide template settings
+% ==============================
+% --- below is other color configurations ---
+\definecolor{darkred}{rgb}{0.8,0,0}
+
+\setbeamercolor{section in toc}{fg=black,bg=white}
+\setbeamercolor{alerted text}{fg=darkred!80!gray}
+\setbeamercolor*{palette primary}{fg=darkred!60!black,bg=gray!30!white}
+\setbeamercolor*{palette secondary}{fg=darkred!70!black,bg=gray!15!white}
+\setbeamercolor*{palette tertiary}{bg=darkred!80!black,fg=gray!10!white}
+\setbeamercolor*{palette quaternary}{fg=darkred,bg=gray!5!white}
+
+\setbeamercolor*{sidebar}{fg=darkred,bg=gray!15!white}
+
+\setbeamercolor*{palette sidebar primary}{fg=darkred!10!black}
+\setbeamercolor*{palette sidebar secondary}{fg=white}
+\setbeamercolor*{palette sidebar tertiary}{fg=darkred!50!black}
+\setbeamercolor*{palette sidebar quaternary}{fg=gray!10!white}
+
+%\setbeamercolor*{titlelike}{parent=palette primary}
+\setbeamercolor{titlelike}{parent=palette primary,fg=darkred}
+
+\newcommand*\HUSTFrameTitleBG{HUSTBlue}
+\newcommand*\HUSTFrameTitleTextColor{HUSTRed}
+\ifdefstring{\template@theme}{red}{%
+  \renewcommand*\HUSTFrameTitleBG{HUSTRed}%
+  \renewcommand*\HUSTFrameTitleTextColor{HUSTBlue}%
+}{}
+
+\setbeamercolor{frametitle}{bg=\HUSTFrameTitleBG,fg=white}
+\setbeamercolor{frametitle right}{bg=gray!60!white}
+
+\makeatletter
+\setbeamertemplate{frametitle}{%
+  \nointerlineskip%
+  \begin{beamercolorbox}[
+      wd=\paperwidth,
+      ht=0.065\paperheight,      % <-- vertical height above baseline
+      dp=0.030\paperheight,      % <-- vertical depth below baseline
+      leftskip=0.020\paperwidth,  % <-- left padding
+      rightskip=0.020\paperwidth  % <-- right padding (only used if you add stuff on the right)
+    ]{frametitle}%
+    \usebeamerfont{frametitle}%
+    \strut\insertframetitle\strut%
+  \end{beamercolorbox}%
+}
+\makeatother
+
+\setbeamercolor*{separation line}{}
+\setbeamercolor*{fine separation line}{}
+% ==============================
+% End of Default slide template settings
+% ==============================
+
+\setbeamertemplate{background canvas}{%
+  \begin{tikzpicture}[remember picture,overlay]
+
+  % Dải ngang phía trên: màu phụ thuộc theme
+  \fill[\HUSTTopBarColor]
+    ($(current page.north west)+(0,-0.110\paperheight)$) rectangle
+    ($(current page.north east)+(0,-0.118\paperheight)$);
+
+  % ----------------------------------------
+  % Footer Bar Dimensions (all values as fractions)
+  % ----------------------------------------
+  \pgfmathsetmacro{\barThickness}{0.003}    % Thickness of the red bar
+  \pgfmathsetmacro{\verticalOffset}{0.035}  % Vertical shift for entire footer
+  \pgfmathsetmacro{\horizontalOffset}{0.017} % Left margin for logo
+  \pgfmathsetmacro{\barLeftGap}{0.017}      % Space between logo and bar (1%)
+  \pgfmathsetmacro{\barRightGap}{0.020}     % Right margin for bar (2%)
+
+  % ----------------------------------------
+  % Logo Size Calculation
+  % ----------------------------------------
+  \pgfmathsetmacro{\desiredHeightFraction}{0.069} % Target logo height (6.9%)
+  \pgfmathsetmacro{\logoAspect}{\logoWpx/\logoHpx} % Aspect ratio from pixels
+  \pgfmathsetmacro{\logoWidthFraction}{\desiredHeightFraction*\logoAspect*(\paperheight/\paperwidth)}
+
+  % ----------------------------------------
+  % Bar Vertical Positioning
+  % ----------------------------------------
+  \pgfmathsetmacro{\barYmid}{\desiredHeightFraction/2 + \verticalOffset}
+  \pgfmathsetmacro{\barYtop}{\barYmid + \barThickness/2}
+  \pgfmathsetmacro{\barYbot}{\barYmid - \barThickness/2}
+
+  % ----------------------------------------
+  % Logo Placement
+  % ----------------------------------------
+  % Calculate logo position and right edge for bar alignment
+  \pgfmathsetmacro{\logoXcenter}{\horizontalOffset + 0.5*\logoWidthFraction}
+  \pgfmathsetmacro{\logoRightEdge}{\logoXcenter + 0.5*\logoWidthFraction}
+
+  % Place logo with appropriate scaling method
+  \node[anchor=center, inner sep=0pt, outer sep=0pt] (hustlogo)
+    at ($(current page.south west)+(\logoXcenter*\paperwidth,\barYmid*\paperheight)$) {%
+      \ifhustbyheight
+        \includegraphics[height=\desiredHeightFraction\paperheight,keepaspectratio]{\slidelogo}%
+      \else
+        \includegraphics[width=\logoWidthFraction\paperwidth,keepaspectratio]{\slidelogo}%
+      \fi
+  };
+
+  % ----------------------------------------
+  % Red Bar Placement
+  % ----------------------------------------
+  % Draw bar from logo's right edge to page edge with specified gaps
+  \fill[HUSTRed]
+    ($(current page.south west)+(\logoRightEdge*\paperwidth+\barLeftGap*\paperwidth,\barYtop*\paperheight)$) rectangle
+    ($(current page.south east)+(-\barRightGap*\paperwidth,\barYbot*\paperheight)$);
+
+  \end{tikzpicture}%
+}
+% ==============================
+% End of Bottom footer + top bars (TikZ background canvas)
+% ==============================
+
+
+
+% --- other settings ---
+\setbeamerfont{block title}{size={}}
+\setbeamercolor{titlelike}{parent=structure,bg=white}

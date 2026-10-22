@@ -1,0 +1,869 @@
+% !TEX program = xelatex
+% Bản dùng HUST Beamer Template (SoICT) -- theme=blue, 16:9.
+% Biên dịch bằng XeLaTeX (hỗ trợ tiếng Việt):
+%   tectonic -X compile main.tex      hoặc      latexmk -xelatex main.tex
+% Trên Overleaf: Menu -> Settings -> Compiler -> XeLaTeX.
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme[theme=blue,logo=hustwithtext,assetext=pdf]{HUST}
+\setbeamertemplate{navigation symbols}{}
+
+% Màu chữ/ký hiệu theo nhận diện HUST
+\setbeamercolor{structure}{fg=HUSTBlue}
+\setbeamercolor{alerted text}{fg=HUSTRed}
+\setbeamercolor{block title}{bg=HUSTBlue,fg=white}
+\setbeamercolor{block body}{bg=HUSTBlue!8}
+\setbeamercolor{block title alerted}{bg=HUSTRed,fg=white}
+\setbeamercolor{block body alerted}{bg=HUSTRed!8}
+
+% Số trang ở góc dưới phải, ngay trên thanh đỏ của footer
+\setbeamertemplate{footline}{%
+  \hfill{\scriptsize\color{HUSTBlue}\insertframenumber\,/\,\inserttotalframenumber}%
+  \hspace{0.02\paperwidth}\vspace{0.075\paperheight}}
+
+% ---------- Ngôn ngữ & font ----------
+\usepackage{fontspec}          % font mặc định Latin Modern, đủ dấu tiếng Việt
+\usepackage{polyglossia}
+\setmainlanguage{vietnamese}
+\setotherlanguage{english}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,array}
+\usepackage{pifont}
+\usetikzlibrary{positioning,arrows.meta,fit}
+\colorlet{mainblue}{HUSTBlue}
+
+\newcommand{\yes}{\ding{51}}
+\newcommand{\no}{\ding{55}}
+\tikzset{
+  stage/.style={draw=HUSTBlue, fill=HUSTBlue!8, rounded corners=3pt,
+    align=center, font=\small, minimum height=1.1cm, text width=2.3cm},
+  arrow/.style={-{Stealth[length=5pt]}, thick, HUSTBlue}
+}
+
+% Đặt nội dung tại vị trí cố định trên trang (dùng cho slide bìa / cảm ơn)
+\newcommand{\placecontent}[4]{%
+  \tikz[remember picture,overlay]
+    \node[anchor=north west]
+      at ([xshift=#1,yshift=-#2]current page.north west)
+      {\parbox{#3}{#4}};
+}
+
+% Mỗi phần mở đầu bằng slide chuyển phần trên nền theme của HUST
+\AtBeginSection[]{%
+  {\HUSTUseBackground{theme}
+  \begin{frame}[plain]
+    \centering
+    {\color{white}\scalebox{2}{\Huge\bfseries 0\thesection}\par}
+    \vspace{10pt}
+    {\color{white}\Large\bfseries\insertsectionhead\par}
+  \end{frame}}}
+
+\title{Multi-Agent Systems \& Collaborative Reasoning}
+\subtitle{Khảo sát, phân tích và đánh giá 8 nghiên cứu năm 2026}
+\author{Trần Xuân Hương · Vũ Tùng Dương · Phạm Việt Dũng · Lê Văn Đức}
+
+\begin{document}
+
+\HUSTInsertBrandSlide
+
+{\HUSTUseBackground{onelove}
+\begin{frame}[plain]
+  \HUSTCornerImage[0.12]{assets/logo/03.pdf}
+  \placecontent{0.55cm}{0.20\paperheight}{0.62\paperwidth}{
+    \raggedright\color{HUSTRed}\bfseries\fontsize{22pt}{28pt}\selectfont
+    \inserttitle
+  }
+  \placecontent{0.55cm}{0.43\paperheight}{0.60\paperwidth}{
+    \raggedright\color{HUSTBlue}
+    {\fontsize{12pt}{15pt}\selectfont \insertsubtitle\par}
+    \vspace{14pt}
+    \small
+    \begin{minipage}[t]{0.27\paperwidth}
+      \textbf{Nhóm thực hiện}\\[3pt]
+      Trần Xuân Hương\\
+      Vũ Tùng Dương\\
+      Phạm Việt Dũng\\
+      Lê Văn Đức
+    \end{minipage}%
+    \hspace{0.03\paperwidth}%
+    \begin{minipage}[t]{0.28\paperwidth}
+      \textbf{Giảng viên hướng dẫn}\\[3pt]
+      PGS.TS. Lê Thanh Hương\\[8pt]
+      \textbf{Học phần}\\[3pt]
+      IT4772 -- Xử lý ngôn ngữ tự nhiên\\
+      Báo cáo Bài tập lớn
+    \end{minipage}
+  }
+\end{frame}
+}
+
+\begin{frame}{Nội dung trình bày}
+  \tableofcontents
+\end{frame}
+
+% ============================================================
+\section{Giới thiệu}
+% ============================================================
+
+\begin{frame}{LLM-based MAS: nhiều agent cùng suy luận}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \textbf{Ý tưởng}
+      \begin{itemize}
+        \item Mỗi agent = backbone LLM + role prompt + (tùy chọn) tool.
+        \item Các agent trao đổi message để cùng giải bài toán: planner, coder, critic, verifier…
+        \item Framework tiêu biểu: CAMEL, AutoGen, MetaGPT, multi-agent debate.
+      \end{itemize}
+      \vspace{4pt}
+      \textbf{Câu hỏi nghiên cứu năm 2026}\\
+      Không còn là “cộng tác có giúp không?” mà là:
+      hiệu quả chi phí · luồng thông tin · an toàn · ứng dụng chuyên ngành.
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{MAS = communication graph}
+        Node là agent; cạnh $v_j \to v_i$: output của $v_j$ làm context cho $v_i$.
+        \[ r_i = \mathrm{LLM}(p_i,\, q,\, O_i) \]
+        Topology có thể tối ưu (GPTSwarm, G-Designer) hoặc cắt tỉa (AgentPrune).
+      \end{block}
+      \begin{alertblock}{Vì sao topology quan trọng?}
+        Vừa là đòn bẩy hiệu năng, vừa là kênh lan truyền lỗi, vừa là bề mặt tấn công.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Bốn thách thức chính của MAS}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{C1 -- Chi phí}
+        Nhiều lần gọi LLM, context dài $\to$ token, năng lượng GPU, latency tăng nhanh.\\
+        $\Rightarrow$ ProgRouter, DAIN
+      \end{block}
+      \begin{block}{C2 -- Quá tải context}
+        “Lost in the middle”; compaction hay pruning đều làm mất thông tin.\\
+        $\Rightarrow$ AGENT-RADAR
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{C3 -- Lan truyền lỗi}
+        Hallucination hoặc misinformation lan theo cạnh và bị khuếch đại.\\
+        $\Rightarrow$ HalluProp, TIDE
+      \end{block}
+      \begin{block}{C4 -- Bảo mật topology}
+        Topology là tài sản trí tuệ; lộ topology $\to$ tấn công có chủ đích.\\
+        $\Rightarrow$ MIRAGE
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Tám paper được khảo sát}
+  \begin{columns}[T]
+    \begin{column}{0.68\textwidth}
+      \scriptsize
+      \begin{tabular}{@{}c l >{\raggedright\arraybackslash}p{2.9cm} c l@{}}
+        \toprule
+        \# & Paper & Chủ đề chính & Nộp & Nhóm \\
+        \midrule
+        1 & MIRAGE      & Che giấu topology bằng phantom structure    & 29/09 & Safety \\
+        2 & MAC-RRG     & Multi-agent cho radiology report generation & 20/09 & Application \\
+        3 & ProgRouter  & Routing LLM theo tiến độ, có ngân sách      & 26/08 & Orchestration \\
+        4 & TIDE        & Misinformation khi sự thật bị phân tán      & 04/08 & Safety \\
+        5 & HalluProp   & Dự báo rủi ro hallucination pre-hoc         & 29/07 & Orchestration \\
+        6 & UrbanAgent  & Urban region profiling (KDD’26)             & 15/07 & Application \\
+        7 & DAIN        & Dynamic agent interaction network           & 29/06 & Communication \\
+        8 & AGENT-RADAR & Attention steering cho MAS                  & 28/05 & Communication \\
+        \bottomrule
+      \end{tabular}
+    \end{column}
+    \begin{column}{0.28\textwidth}
+      \textbf{Cách chọn bài}
+      \begin{itemize}
+        \item Nguồn: arXiv.
+        \item Abstract chứa “multi-agent” và “collaborative reasoning”.
+        \item 8 bài mới nhất (05--09/2026).
+      \end{itemize}
+      \vspace{4pt}
+      \textbf{Lưu ý:} 7/8 là preprint; chỉ UrbanAgent đã được nhận ở KDD 2026.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Taxonomy: bốn hướng nghiên cứu}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Safety \& Robustness}
+        Hệ thống có chống chịu được tấn công và thông tin sai?\\
+        \textbf{\#1 MIRAGE · \#4 TIDE}
+      \end{block}
+      \begin{block}{Communication \& Interaction}
+        Agent trao đổi gì, với ai, mức độ nào?\\
+        \textbf{\#7 DAIN · \#8 AGENT-RADAR}
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Orchestration \& Control}
+        Ai chạy, chạy bằng model nào, agent nào rủi ro?\\
+        \textbf{\#3 ProgRouter · \#5 HalluProp}
+      \end{block}
+      \begin{block}{Domain Applications}
+        Áp dụng cộng tác vào bài toán chuyên ngành.\\
+        \textbf{\#2 MAC-RRG · \#6 UrbanAgent}
+      \end{block}
+    \end{column}
+  \end{columns}
+  \vspace{4pt}
+  {\small Phân loại theo mục tiêu chính; nhiều bài thuộc nhiều nhóm
+  (VD: HalluProp vừa là orchestration vừa là safety).}
+\end{frame}
+
+\begin{frame}{Mỗi phương pháp can thiệp ở đâu trong lifecycle của MAS}
+  \centering
+  \begin{tikzpicture}[node distance=0.35cm, stage/.append style={text width=2.0cm}]
+    \node[stage] (s1) {Thiết kế role\\\& graph};
+    \node[stage, right=of s1] (s2) {Điều phối\\\& kích hoạt};
+    \node[stage, right=of s2] (s3) {Giao tiếp\\\& suy luận};
+    \node[stage, right=of s3] (s4) {Tổng hợp\\\& phơi bày};
+    \node[stage, right=of s4] (s5) {Đánh giá\\\& kiểm toán};
+    \foreach \a/\b in {s1/s2,s2/s3,s3/s4,s4/s5} \draw[arrow] (\a) -- (\b);
+    \foreach \s/\list in {
+        s1/{HalluProp (pre-hoc)},
+        s2/{ProgRouter\\DAIN (gating)},
+        s3/{AGENT-RADAR\\DAIN (graph)\\UrbanAgent\\MAC-RRG},
+        s4/{MIRAGE},
+        s5/{TIDE}}
+      \node[below=0.3cm of \s, align=center, font=\small, anchor=north] {\list};
+  \end{tikzpicture}
+\end{frame}
+
+% ============================================================
+\section{Safety \& Robustness}
+% ============================================================
+
+\begin{frame}{MIRAGE: che giấu topology bằng phantom structure}
+  \begin{columns}[T]
+    \begin{column}{0.42\textwidth}
+      \textbf{Bài toán:} tấn công CIA suy ra topology chỉ qua truy vấn hộp đen;
+      lộ topology $\to$ mất tài sản trí tuệ, lộ agent then chốt.
+      \vspace{4pt}
+
+      \textbf{Phương pháp: 3 bước}
+      \begin{enumerate}
+        \item \emph{Phantom topology:} đi dây lại cạnh, độ lệch $\rho \ge \rho_0$ ($k$-anonymity).
+        \item \emph{Semantic edge realization:} LLM sinh bằng chứng giả cho phantom edge; paraphrase để giấu cạnh thật.
+        \item \emph{Dual-view execution:} chạy trên $G$ thật, chỉ phơi bày $G'$.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.56\textwidth}
+      \centering
+      {\small AUC / ACC / F1 của tấn công (G-Designer, thấp hơn là tốt)\par}
+      \vspace{3pt}
+      \footnotesize
+      \begin{tabular}{@{}l c c@{}}
+        \toprule
+        Dataset & Delimiters & MIRAGE \\
+        \midrule
+        MMLU      & 0.76 / 0.61 / 0.64 & \textbf{0.67 / 0.50 / 0.49} \\
+        GSM8K     & 0.80 / 0.76 / 0.67 & \textbf{0.64 / 0.51 / 0.42} \\
+        SVAMP     & 0.70 / 0.68 / 0.71 & \textbf{0.64 / 0.48 / 0.39} \\
+        HumanEval & 0.76 / 0.65 / 0.56 & \textbf{0.68 / 0.44 / 0.52} \\
+        \bottomrule
+      \end{tabular}
+      \vspace{6pt}
+      \begin{alertblock}{Hạn chế}
+        \raggedright
+        Chỉ 1 tấn công, không có adaptive attacker; AUC vẫn 0.64--0.68 (lý tưởng 0.5);
+        không báo cáo chi phí gọi LLM thêm.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{TIDE: misinformation làm chệch collective fact recovery}
+  \textbf{Thiết lập}
+  \begin{itemize}
+    \item 120 môi trường Hi-ToM; 5 agent, mỗi agent chỉ thấy một phần chuỗi vị trí.
+    \item C0: tất cả trung thực · C1: key agent nói dối (Event / Coverage / Source).
+    \item GPT-5.5, DeepSeek-v4-pro, Grok-4.5; đo cả evidence lineage.
+  \end{itemize}
+  \vspace{4pt}
+  \textbf{Kết quả chính}
+  \begin{itemize}
+    \item Tỉ lệ đa số đúng: \textbf{72.50\% $\to$ 14.17\%} (C0 $\to$ C1).
+    \item Testimony sai được chấp nhận \textbf{70.7\%}, so với \textbf{25.4\%} của testimony đúng.
+    \item Propagation order: \textbf{2.66} (sai) so với \textbf{1.33} (đúng).
+  \end{itemize}
+  \begin{block}{Thông điệp}
+    Thảo luận \emph{khuếch đại} chiều hướng của bằng chứng ban đầu thay vì sửa sai;
+    $\sim$85\% khoảng cách hình thành ngay khi chia sẻ testimony.
+    Observer giảm 90\% decoy majority nhưng không tăng đáp án đúng.
+    Hạn chế: 1 tác vụ hẹp, chưa có defense.
+  \end{block}
+\end{frame}
+
+% ============================================================
+\section{Orchestration \& Control}
+% ============================================================
+
+\begin{frame}{ProgRouter: Đặt vấn đề}
+  \textbf{Bối cảnh}
+  \begin{itemize}
+    \item Multi-agent LLM workflow giải tốt task phức tạp nhưng \alert{đắt}:
+      gọi LLM nhiều lần, context tích lũy dài $\to$ tốn token, năng lượng GPU, latency.
+    \item Cascade routing (RouteLLM, CASCADIA, MasRouter) chọn model
+      \emph{một lần cho cả query} -- không theo kịp trạng thái thay đổi qua từng bước.
+  \end{itemize}
+  \vspace{6pt}
+  \begin{block}{Câu hỏi của paper}
+    Chọn LLM cho \textbf{từng bước} của workflow thế nào để giữ chất lượng
+    mà vẫn nằm trong ngân sách chi phí?
+  \end{block}
+\end{frame}
+
+\begin{frame}{ProgRouter: Problem setting}
+  \small
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+      \textbf{Workflow} $w = \{C, R, M\}$
+      \begin{itemize}
+        \item $C$: coordinator agent -- chia subtask, giữ \emph{ledger} trạng thái $s_t$,
+          chọn role $r_t$ cho bước tiếp theo.
+        \item $R$: các role worker (analyst, coder…).
+        \item $M$: model zoo nhiều cỡ; $M_r \subseteq M$ là các model dùng được cho role $r$.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \textbf{Bài toán tối ưu online} trên dòng $W$ task:
+      tìm policy $\pi(s_t, r_t) \mapsto m_t \in M_{r_t}$
+      \begin{align*}
+        \max_\pi\;& \tfrac{1}{W}\textstyle\sum_{w} P(w) \\
+        \text{s.t.}\;& \textstyle\sum_{t} E(m_t) \le E_w,\quad
+                       \sum_{t} \Gamma(m_t) \le \Gamma_w \quad \forall w \\
+        & \tfrac{1}{W}\textstyle\sum_{w}\sum_{t} E(m_t) \le \tilde E
+      \end{align*}
+      {\footnotesize $P(w)\in[0,1]$: chất lượng cuối; $E$, $\Gamma$: năng lượng, thời gian;
+      $\tilde E$: ngân sách năng lượng trung bình dài hạn.}
+      \begin{alertblock}{Hai khó khăn}
+        (1) $P(w)$ chỉ biết khi workflow kết thúc $\to$ không chấm được từng bước.\\
+        (2) Ràng buộc trung bình phụ thuộc các task tương lai chưa biết.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{ProgRouter: Tổng quan phương pháp}
+  \centering
+  \begin{tikzpicture}[node distance=0.42cm,
+      box/.style={stage, text width=2.1cm, font=\small, minimum height=1.7cm},
+      core/.style={box, fill=mainblue, text=white}]
+    \node[box] (c) {\textbf{Coordinator}\\ ledger $s_t$,\\ chọn role $r_t$};
+    \node[core, right=of c] (g) {\textbf{Scorer}\\ tiến độ hiện tại\\ $g(s_t)$};
+    \node[core, right=of g] (p) {\textbf{Predictor}\\ mức tăng $\hat y_t(m)$\\ $\forall m \in M_{r_t}$};
+    \node[core, right=of p] (r) {\textbf{Router}\\ $m^\star_t = \arg\max$\\ score$(m)$};
+    \node[box, right=of r] (x) {\textbf{Worker} $r_t$\\ chạy bằng $m^\star_t$\\ $\to s_{t+1}$};
+    \foreach \a/\b in {c/g,g/p,p/r,r/x} \draw[arrow] (\a) -- (\b);
+    \draw[arrow] (x.south) -- ++(0,-1.05) -| node[pos=0.25, below, font=\footnotesize]
+      {trạng thái mới $s_{t+1}$ quay lại coordinator} (c.south);
+    \draw[arrow, dashed] (x.north) -- ++(0,0.6) -| node[pos=0.25, above, font=\footnotesize]
+      {nhãn học online: $y_t = g(s_{t+1}) - g(s_t)$} (p.north);
+    \node[draw=mainblue, dotted, thick, rounded corners, fit=(g)(p)(r), inner sep=4pt,
+      label={[font=\footnotesize\bfseries, text=mainblue]below:ProgRouter}] {};
+  \end{tikzpicture}
+  \vspace{10pt}
+
+  Ở mỗi bước, coordinator chọn role; ProgRouter \textbf{đo} tiến độ hiện tại,
+  \textbf{dự đoán} mỗi model ứng viên giúp tiến thêm bao nhiêu, rồi \textbf{chọn} model
+  cân bằng giữa tiến độ và ngân sách.
+\end{frame}
+
+\begin{frame}{ProgRouter: Đo và dự đoán tiến độ}
+  \begin{columns}[T]
+    \begin{column}{0.53\textwidth}
+      \begin{block}{Multi-View Task Progress Representation}
+        \small
+        \[ g(s_t) = b + \alpha\, r + \beta\, d + \gamma\, e \;\in [0,1] \]
+        \vspace{-10pt}
+        \begin{itemize}\setlength{\itemsep}{1pt}
+          \item $b$: \textbf{Overall outcome} -- Trạng thái tổng quát của workflow.
+          \item $r$: \textbf{Subtask completion} -- Tỉ lệ subtask hoàn thành.
+          \item $d$: \textbf{Progress trend} -- Tiến độ của workflow.
+          \item $e$: \textbf{State quality} -- Mức ý nghĩa về ngữ nghĩa và cấu trúc
+            của lần chuyển trạng thái gần nhất.
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Online Task Progress Predictor}
+        \centering
+        \begin{tikzpicture}[
+            box/.style={stage, text width=2.35cm, minimum height=0.95cm, font=\scriptsize}]
+          \node[box, text width=0.85cm] (s) at (0,0) {$s_t$,\\ $m_t$};
+          \node[box] (a) at (2.05, 0.75) {\textbf{Structured path}\\[2pt] $\hat y^{\text{str}}_t = P_{\text{str}}(x^{\text{str}}_t)$};
+          \node[box] (b) at (2.05,-0.75) {\textbf{Semantic path}\\[2pt] $\hat y^{\text{sem}}_t = P_{\text{sem}}(x^{\text{sem}}_t)$};
+          \node[box, text width=1.75cm, fill=mainblue, text=white] (c) at (4.75,0) {\textbf{Meta-gated}\\ \textbf{learner}};
+          \draw[arrow] (s.east) -- (a.west); \draw[arrow] (s.east) -- (b.west);
+          \draw[arrow] (a.east) -- (c.west); \draw[arrow] (b.east) -- (c.west);
+          \node[below=0.25cm of c] (y) {$\hat y_t(m_t)$};
+          \draw[arrow] (c) -- (y);
+        \end{tikzpicture}
+        \[ \hat y_t = P_{\text{meta}}\bigl(\hat y^{\text{str}}_t,\; \hat y^{\text{sem}}_t\bigr) \]
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{ProgRouter: Chọn model ở mỗi bước}
+  Ở bước $t$, chọn $m^\star_t = \arg\max_{m_t \in M_{r_t}} \mathrm{score}(m_t)$, với mỗi model ứng viên $m_t$:
+  \[ \mathrm{score}(m_t) =
+     \underbrace{V(1-g(s_t))\,\hat y_t(m_t)}_{\text{\textcolor{mainblue}{lợi ích}}}
+     \;-\; \underbrace{Q_w\bigl(E(m_t)-\tilde E\bigr)}_{\text{\textcolor{mainblue}{phạt dài hạn}}}
+     \;-\; \underbrace{c^\Gamma_t\,\Gamma(m_t) \;-\; c^E_t\,E(m_t)}_{\text{\textcolor{mainblue}{phạt trong task}}} \]
+  \textbf{\color{mainblue}Lợi ích:} task còn xa đích ($g$ nhỏ) thì tiến độ đáng giá hơn $\to$ dám gọi model mạnh.
+  \vspace{2pt}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Phạt dài hạn}
+        Hàng đợi ảo cộng dồn phần vượt ngân sách sau mỗi task:
+        \[ Q_{w+1} = \max\bigl\{0,\; Q_w + \textstyle\sum_{t=1}^{T_w} E(m_t) - \tilde E\bigr\} \]
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Phạt trong task}
+        Tăng dần khi task gần hết ngân sách ($c^\Gamma_t$ tương tự, theo thời gian):
+        \[ c^E_t = \exp\Bigl(\tfrac{E(m_t) + \sum_{i<t} E(m_i)}{E_w}\Bigr) \]
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{ProgRouter: Thực nghiệm và kết quả chính}
+  \relax{\footnotesize
+  \textbf{Thiết lập:} 4 benchmark (code, toán, RAG QA); model zoo 7--9 LLM từ 0.5B đến 35B;
+  coordinator Qwen3-Coder-Next 80B; năng lượng GPU đo thật bằng NVML.\par}
+  \vspace{3pt}
+  \centering
+  \scriptsize
+  \begin{tabular}{@{}l c c c c@{}}
+    \toprule
+    Pass/Precision \% / năng lượng J & HumanEval+ & MBPP & MATH-500 & ASQA \\
+    \quad (ngân sách $\tilde E$) & (4,800) & (4,500) & (7,000) & (19,000) \\
+    \midrule
+    Model lớn nhất, dùng một mình & 97.1 / \alert{5,443} & 93.9 / \alert{4,804} & 92.2 / \alert{26,276} & 92.3 / \alert{21,887} \\
+    Educated Guessing & 91.5 / \alert{4,916} & 65.2 / 3,831 & 79.3 / \alert{7,023} & 90.8 / \alert{23,423} \\
+    CASCADIA          & 84.8 / 4,658 & 78.5 / 3,857 & \textbf{87.8} / 6,875 & 89.8 / \alert{27,857} \\
+    MasRouter         & 90.9 / 4,483 & 67.8 / 3,700 & 73.6 / \alert{8,294} & 89.8 / 16,368 \\
+    \textbf{ProgRouter} & \textbf{93.0} / 4,796 & \textbf{79.4} / \textbf{3,376} & 84.3 / \textbf{6,112} & \textbf{92.1} / 18,373 \\
+    \bottomrule
+  \end{tabular}\\[2pt]
+  {\scriptsize \alert{Đỏ}: vượt ngân sách năng lượng dài hạn; \textbf{đậm}: tốt nhất trong các phương pháp không vượt ngân sách.\par}
+  \vspace{2pt}
+  \raggedright\footnotesize
+  \begin{itemize}
+    \item Dùng một model cố định đều thua: model lớn vượt ngân sách; model nhỏ cũng tốn vì phải sửa lỗi nhiều lần.
+    \item ProgRouter luôn trong ngân sách, tốt nhất ở 3/4 benchmark; phần lớn lời gọi dồn vào model nhỏ
+      (84.3\% Qwen2.5-Coder 0.5B trên HumanEval+, 91.0\% Granite 3B trên MATH-500).
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}{HalluProp: Đặt vấn đề}
+  \textbf{Bối cảnh}
+  \begin{itemize}
+    \item Trong MAS, hallucination \alert{lan truyền}: một agent sai, các agent khác
+      chấp nhận, lặp lại và khuếch đại $\to$ cả hệ thống ra kết quả sai.
+    \item Các phương pháp hiện có (SelfCheckGPT, LLM Debate, Inspector, GUARDIAN) đều
+      \textbf{post-hoc}: chạy hết MAS rồi mới phát hiện -- lỗi đã lan, tốn 53--308 s/query.
+  \end{itemize}
+  \vspace{6pt}
+  \begin{block}{Câu hỏi của paper}
+    Có thể dự đoán agent nào sẽ hỏng \textbf{trước khi} các agent bắt đầu giao tiếp?
+  \end{block}
+\end{frame}
+
+\begin{frame}{HalluProp: Problem setting}
+  \small
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      \textbf{MAS là đồ thị có hướng} $M = (V, E)$
+      \begin{itemize}
+        \item $V = \{v_1, \dots, v_N\}$: $N$ agent; agent $v_i$ có system prompt (role) $p_i$.
+        \item $E \in \{0,1\}^{N \times N}$: cạnh $v_j \to v_i$ nghĩa là $v_i$ đọc output của $v_j$.
+        \item $q$: câu hỏi của người dùng.
+        \item $H_i \in \{0,1\}$: agent $v_i$ có hallucinate không
+          (thực nghiệm: trả lời sai so với đáp án).
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \textbf{Mục tiêu:} ước lượng rủi ro của từng agent
+      \[ h_i = P\bigl(H_i = 1 \mid \{p_i\}_{i=1}^N,\; q,\; E\bigr) \]
+      Đầu vào \textbf{chỉ có} role, câu hỏi và topology -- chưa có câu trả lời nào.
+      \begin{block}{Tách rủi ro làm hai phần}
+        \begin{itemize}
+          \item \textbf{Intrinsic} $\pi_i \in [0,1]$: rủi ro agent $v_i$ tự sai.
+          \item \textbf{Propagation} $t_{j\to i} \in [0,1]$: xác suất lỗi của $v_j$ lây sang $v_i$.
+        \end{itemize}
+        Gộp $\pi$ và $T = [t_{j\to i}]$ trên đồ thị để ra $h = [h_1, \dots, h_N]$.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{HalluProp: Intrinsic risk -- role có hợp với câu hỏi không?}
+  \small
+  \begin{columns}[T]
+    \begin{column}{0.55\textwidth}
+      \textbf{1. Encode} role và câu hỏi vào cùng không gian:
+      \[ e^R_i = \mathrm{Enc}(p_i), \qquad e^Q = \mathrm{Enc}(q) \]
+      \textbf{2. Gate theo câu hỏi} -- chọn các chiều của role liên quan đến câu hỏi:
+      \[ g_i = \sigma\bigl(W_{\text{gate}}\,(e^R_i \odot e^Q) + b_g\bigr) \]
+      \textbf{3. Tách role} làm hai phần:
+      \[ \underbrace{\kappa_i = e^R_i \odot g_i}_{\text{competence}}, \qquad
+         \underbrace{\rho_i = \mathrm{LN}(e^R_i - \kappa_i)}_{\text{susceptibility}} \]
+      \textbf{4. Rủi ro:}
+      \[ \pi_i = \sigma\bigl(w_\rho^\top \rho_i - w_\kappa^\top \kappa_i + b_\pi\bigr) \]
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{block}{Trực giác}
+        \begin{itemize}
+          \item $\kappa_i$ (\emph{competence}): phần của role khớp với câu hỏi.
+          \item $\rho_i$ (\emph{susceptibility}): phần còn lại -- lạc đề, mơ hồ hoặc gây nhiễu.
+          \item Nhiều nhiễu, ít năng lực $\to$ $\pi_i$ cao.
+        \end{itemize}
+      \end{block}
+      {\footnotesize Chỉ so độ tương đồng tổng thể giữa role và câu hỏi là không đủ,
+      vì role prompt thường mơ hồ hoặc chứa nội dung gây nhiễu.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{HalluProp: Lan truyền và Noisy-OR}
+  \small
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Propagation qua cạnh $v_j \to v_i$}
+        \[ t_{j\to i} = \sigma\bigl(\gamma_{j,i}\; \kappa_j^\top W_{\text{sem}}\, \rho_i + b_t\bigr) \]
+        \vspace{-8pt}
+        \begin{itemize}
+          \item $\kappa_j$: bên gửi có sức ảnh hưởng.
+          \item $\rho_i$: bên nhận dễ bị lây.
+          \item $\gamma_{j,i} = \phi(\hat k_{\text{out}}(j), \hat k_{\text{in}}(i)) \ge 1$:
+            khuếch đại theo bậc ra / bậc vào.
+          \item $t_{j\to i} = 0$ nếu không có cạnh.
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Noisy-OR trên đồ thị}
+        \[ h_i = 1 - (1-\pi_i) \prod_{j \in N_{\text{in}}(i)} \bigl(1 - t_{j\to i}\, h_j\bigr) \]
+        Agent \emph{không} hỏng $\iff$ tự không sai \textbf{và} không bị lây từ agent nào.
+      \end{block}
+    \end{column}
+  \end{columns}
+  \vspace{4pt}
+  \textbf{Huấn luyện 2 giai đoạn:} học $\pi$ với nhãn từng agent \emph{trước} giao tiếp,
+  rồi học $T$ với nhãn \emph{sau} giao tiếp, BCE trên $h$.
+\end{frame}
+
+\begin{frame}{HalluProp: Thực nghiệm và kết quả}
+  \begin{columns}[T]
+    \begin{column}{0.46\textwidth}
+      \textbf{Thiết lập}
+      \begin{itemize}\small
+        \item MMLU, MATH, MedQA (500 câu mỗi bộ).
+        \item 4 backbone: GPT-3.5, GPT-4o, Llama-3-8B, Qwen-2-7B.
+        \item Topology ngẫu nhiên; role sạch lẫn role bị nhiễu; 3 vòng giao tiếp.
+      \end{itemize}
+      \textbf{Phát hiện agent hỏng}
+      \begin{itemize}\small
+        \item AUROC trung bình \textbf{84.6}; Hit@1 \textbf{83.9}; Recall@3 \textbf{76.2}.
+      \end{itemize}
+      \textbf{Tốc độ}
+      \begin{itemize}\small
+        \item Dưới \textbf{1 s}, so với 53--308 s của post-hoc (nhanh hơn $>65\times$).
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \centering
+      {\small Accuracy sau can thiệp vào agent rủi ro nhất\\ (trung bình 4 LLM $\times$ 3 dataset)\par}
+      \vspace{4pt}
+      \small
+      \begin{tabular}{@{}l c@{}}
+        \toprule
+        Phương pháp & Accuracy \% \\
+        \midrule
+        LLM Debate   & 55.7 \\
+        Inspector    & 54.4 \\
+        SelfCheckGPT & 56.7 \\
+        GUARDIAN     & 63.5 \\
+        \midrule
+        HalluProp-Pruning     & 63.6 \\
+        HalluProp-Refinement  & \textbf{67.6} \\
+        \bottomrule
+      \end{tabular}\\[4pt]
+      \raggedright\footnotesize
+      \emph{Pruning}: cắt mọi cạnh ra của agent đó.
+      \emph{Refinement}: đổi role của nó thành verifier thận trọng.
+      Các baseline đều post-hoc, phải chạy hết MAS.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{HalluProp: Ablation}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \centering
+      {\small AUROC trung bình trên GPT-3.5-turbo (3 dataset)\par}
+      \vspace{4pt}
+      \begin{tabular}{@{}l c c@{}}
+        \toprule
+        Biến thể & AUROC & Giảm \\
+        \midrule
+        HalluProp đầy đủ        & \textbf{84.8} & -- \\
+        bỏ intrinsic risk       & 61.2 & \alert{$-23.6$} \\
+        bỏ propagation          & 66.9 & \alert{$-17.9$} \\
+        bỏ topology ($\gamma$)  & 72.1 & \alert{$-12.7$} \\
+        \bottomrule
+      \end{tabular}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{itemize}
+        \item \textbf{Bỏ intrinsic risk} (thay bằng độ tương đồng role--câu hỏi): giảm mạnh nhất
+          $\to$ tách competence / susceptibility là cần thiết.
+        \item \textbf{Bỏ propagation} ($t_{j\to i} = 0$, khi đó $h_i = \pi_i$): lỗi trong MAS
+          không chỉ là lỗi riêng lẻ mà còn lan qua giao tiếp.
+        \item \textbf{Bỏ topology}: không nhận ra các agent phát tán mạnh.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \vspace{6pt}
+  \begin{block}{}
+    Cả ba thành phần đều cần thiết; thiếu bất kỳ thành phần nào, AUROC giảm từ 12.7 đến 23.6 điểm.
+  \end{block}
+\end{frame}
+
+% ============================================================
+\section{Communication \& Interaction}
+% ============================================================
+
+\begin{frame}{DAIN: Dynamic Agent-based Interaction Network}
+  \centering
+  \begin{tikzpicture}[node distance=0.5cm]
+    \node[stage, text width=2.8cm] (a) {\textbf{Encode}\\ ResNet-50, BERT $\to e_c$};
+    \node[stage, text width=2.8cm, right=of a] (b) {\textbf{Meta-Controller}\\ sparse gate + soft graph $\Phi$};
+    \node[stage, text width=2.8cm, right=of b] (c) {\textbf{Message passing}\\ low-rank bottleneck};
+    \node[stage, text width=2.8cm, right=of c] (d) {\textbf{Consensus}\\ attention $\to$ kết quả};
+    \foreach \x/\y in {a/b,b/c,c/d} \draw[arrow] (\x) -- (\y);
+  \end{tikzpicture}
+  \raggedright
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item 8 agent theo PID: 3 synergy · 3 uniqueness · 2 redundancy.
+        \item Loss phạt kích hoạt và mật độ giao tiếp: $\lambda\lVert g\rVert_1 + \lambda\lVert \Phi\rVert^2$.
+        \item Chỉ \textbf{3.2--5.5 / 8} agent được kích hoạt.
+        \item ADNI accuracy \textbf{73.5} so với 70.9 (best baseline).
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{alertblock}{Lưu ý khi đánh giá}
+        \begin{itemize}
+          \item “Agent” là neural module, không phải LLM: bản chất là MoE có message passing.
+          \item Bỏ communication: $-1.4$; bỏ dynamic scheduling: $-1.7$ điểm (ADNI).
+          \item Số liệu không nhất quán giữa các bảng; baseline yếu.
+        \end{itemize}
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{AGENT-RADAR: attention steering theo context relevance}
+  \textbf{Ý tưởng}
+  \begin{itemize}
+    \item Giữ toàn bộ lịch sử, không tóm tắt hay cắt bớt.
+    \item Chấm điểm từng câu; câu có điểm $\ge \theta = 0.65$ được nhấn mạnh bằng SPA.
+    \item Training-free, cắm được vào GPTSwarm, AutoGen, debate.
+  \end{itemize}
+  \begin{block}{Điểm của câu $s_k$}
+    \[ \underbrace{\lambda_s^{\,d_G - 1}}_{\text{spatial decay}} \times
+       \underbrace{\lambda_t^{\,t-\tau-1}}_{\text{temporal decay}} \times
+       \underbrace{\cos(s_k, q)}_{\text{semantic relevance}} \]
+  \end{block}
+  \textbf{Hạn chế:} latency +23\% · cần white-box (logit) $\to$ không dùng với API model ·
+  tune trên MuSiQue (cũng là test set).
+\end{frame}
+
+% ============================================================
+\section{Domain Applications}
+% ============================================================
+
+\begin{frame}{MAC-RRG: multi-agent cho radiology report generation}
+  \centering
+  \begin{tikzpicture}[node distance=0.3cm, stage/.append style={text width=2.1cm}]
+    \node[stage] (a) {\textbf{X-ray}\\ ảnh ngực};
+    \node[stage, right=of a] (b) {\textbf{Draft}\\ Swin + Llama2-7B};
+    \node[stage, right=of b] (c) {\textbf{Entities}\\ giải phẫu, bệnh lý};
+    \node[stage, right=of c] (d) {\textbf{2 agent}\\ MM-KG + Knowledge};
+    \node[stage, right=of d] (e) {\textbf{Report}\\ refined};
+    \foreach \x/\y in {a/b,b/c,c/d,d/e} \draw[arrow] (\x) -- (\y);
+  \end{tikzpicture}
+  \raggedright
+  \begin{columns}[T]
+    \begin{column}{0.44\textwidth}
+      \textbf{Kết quả}
+      \begin{itemize}
+        \item BLEU-4: \textbf{0.197 / 0.128 / 0.105} trên IU X-Ray / MIMIC-CXR / CheXpert Plus.
+        \item Clinical F1 (CheXpert Plus): \textbf{0.295} so với 0.260 của R2GenGPT.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \begin{alertblock}{Đánh giá phản biện}
+        \begin{itemize}
+          \item “Agent” = module retrieval tất định, không giao tiếp hay thương lượng.
+          \item “Iterative” thực tế chỉ 1 lượt tinh chỉnh.
+          \item BLEU tăng nhỏ (0.101 $\to$ 0.105); không kiểm định thống kê, không có bác sĩ đánh giá.
+        \end{itemize}
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{UrbanAgent: collaborative reasoning cho urban region profiling}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \textbf{Stage A · Tool-augmented agents}
+      \begin{itemize}
+        \item 4 agent theo modality: satellite, text, POI, 3D.
+        \item Qwen3-VL-4B + 4 tool (web search, crop-zoom, nightlight, ảnh lịch sử).
+        \item SFT $\to$ GRPO, reward = outcome + format + process.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{Stage B · Relation-aware graph}
+      \begin{itemize}
+        \item \emph{Corroboration:} dự đoán gần nhau $\to$ củng cố.
+        \item \emph{Rectification:} lệch nhiều $\to$ sửa.
+        \item \emph{Supervisory:} agent tự tin hơn hướng dẫn; 5 vòng GRU $\to$ final judge.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \vspace{4pt}
+  \textbf{Kết quả:} $R^2$ \textbf{0.63--0.65} trong miền (carbon, dân số, GDP);
+  $\approx$ \textbf{0.60} trên thành phố chưa thấy; \textbf{+8.1\%} so với baseline mạnh nhất.
+  \begin{alertblock}{Đánh giá phản biện}
+    “Debate” là GNN/GRU được huấn luyện, không phải tranh luận bằng ngôn ngữ.
+    Dữ liệu nhỏ (2,000 vị trí); text sinh từ chính ảnh vệ tinh $\to$ các modality không độc lập.
+  \end{alertblock}
+\end{frame}
+
+% ============================================================
+\section{So sánh \& kết luận}
+% ============================================================
+
+\begin{frame}{So sánh hệ thống tám paper}
+  \centering
+  \footnotesize
+  \begin{tabular}{@{}l l c c l c@{}}
+    \toprule
+    Paper & Loại đóng góp & Training & White-box & Chi phí & Thống kê \\
+    \midrule
+    MIRAGE      & Defense          & \no    & \no  & \no              & \no \\
+    TIDE        & Benchmark        & \no    & \no  & \no              & \yes \\
+    ProgRouter  & Router           & online & \no  & \yes{} năng lượng & \no \\
+    HalluProp   & Risk predictor   & \yes   & \no  & $\sim$ thời gian & \no \\
+    DAIN        & Kiến trúc fusion & \yes   & --   & $\sim$ tham số   & \no \\
+    AGENT-RADAR & Plug-in          & \no    & \yes & $\sim$ thời gian & \no \\
+    MAC-RRG     & Ứng dụng         & \yes   & --   & \no              & \no \\
+    UrbanAgent  & Ứng dụng         & \yes   & --   & \no              & \no \\
+    \bottomrule
+  \end{tabular}
+  \vspace{6pt}
+
+  \raggedright\small
+  \textbf{Đọc bảng:} chỉ TIDE có kiểm định thống kê; chỉ ProgRouter đo năng lượng GPU thực;
+  chỉ AGENT-RADAR bắt buộc white-box. Cùng benchmark nhưng khác tập con, topology, backbone
+  $\to$ không so trực tiếp được con số.
+\end{frame}
+
+\begin{frame}{Ba nhận định xuyên suốt}
+  \begin{enumerate}
+    \item \textbf{Communication graph là trung tâm.}\\
+      6/8 bài thao tác trực tiếp: giấu (MIRAGE), phân tích (HalluProp), đo khoảng cách (RADAR),
+      học (DAIN, UrbanAgent), truy vết (TIDE).
+    \item \textbf{Lan truyền là rủi ro cốt lõi.}\\
+      Thảo luận khuếch đại sai lệch thay vì sửa sai (TIDE); hallucination lan theo cạnh (HalluProp).
+    \item \textbf{Khái niệm “agent” bị nới rộng.}\\
+      LLM agent thật (5 bài) · LLM + aggregator học được (UrbanAgent) ·
+      neural / retrieval module (DAIN, MAC-RRG).
+  \end{enumerate}
+  \vspace{6pt}
+  \begin{block}{}
+    Hiệu quả không đến từ nhiều agent hơn: ProgRouter dùng chủ yếu model 0.5B;
+    DAIN tốt nhất với $\tau = 4/8$ agent.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Research gap và hướng phát triển}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \textbf{Research gap}
+      \begin{itemize}
+        \item[G1] Chưa có benchmark chung: chất lượng + chi phí + robustness.
+        \item[G2] 7/8 bài không có phương sai hay kiểm định thống kê.
+        \item[G3] Quy mô nhỏ: $\le 8$ agent, 2--5 vòng, tác vụ ngắn.
+        \item[G4] Chưa có adaptive attacker; chưa có cách khôi phục sự thật.
+        \item[G5] Phương pháp tối ưu chưa được thử trong điều kiện đối kháng.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{Hướng phát triển}
+      \begin{itemize}
+        \item \emph{Benchmark 3 trục:} chất lượng · chi phí · robustness (giao thức C0/C1 của TIDE).
+        \item \emph{Provenance-aware communication:}
+          $\mathrm{score}(\text{RADAR}) \times (1 - \hat h_j) \times \mu^{\text{hop}}$.
+        \item \emph{Risk-aware routing:} ProgRouter + HalluProp, bước rủi ro $\to$ model mạnh.
+        \item \emph{Verifier agent chủ động:} đòi bằng chứng trực tiếp trước khi đồng thuận.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Kết luận}
+  \begin{enumerate}
+    \item \textbf{Communication graph là trung tâm} -- quyết định hiệu năng, lan truyền rủi ro, cần được bảo vệ.
+    \item \textbf{Lan truyền là rủi ro cốt lõi} -- thảo luận khuếch đại sai lệch thay vì sửa sai.
+    \item \textbf{Hiệu quả = kích hoạt đúng} -- đúng agent, đúng model, chú ý đúng nội dung.
+    \item \textbf{Thực nghiệm còn yếu} -- quy mô nhỏ, thiếu kiểm định, thiếu đo chi phí.
+  \end{enumerate}
+  \vspace{6pt}
+  \begin{block}{Câu hỏi của lĩnh vực đang chuyển}
+    Từ \emph{“nhiều agent có tốt hơn một agent?”}\\
+    sang \textbf{“làm sao để MAS hiệu quả, đáng tin cậy và an toàn?”}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Phân công}
+  \centering
+  \begin{tabular}{@{}l l@{}}
+    \toprule
+    Thành viên & Paper phụ trách \\
+    \midrule
+    Trần Xuân Hương & MIRAGE · TIDE \\
+    Vũ Tùng Dương   & ProgRouter · HalluProp \\
+    Phạm Việt Dũng  & DAIN · AGENT-RADAR \\
+    Lê Văn Đức      & MAC-RRG · UrbanAgent \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+{\HUSTUseBackground{theme_hust_oneside}
+\begin{frame}[plain]
+  \placecontent{0.355\paperwidth}{0.300\paperheight}{0.640\paperwidth}{
+    \centering
+    {\color{HUSTRed}\bfseries\fontsize{28pt}{36pt}\selectfont CẢM ƠN\\ĐÃ LẮNG NGHE!\par}
+    \vspace{14pt}
+    {\color{HUSTBlue}\Large Q\&A\par}
+  }
+\end{frame}
+}
+
+\end{document}
